@@ -14,21 +14,6 @@ database = settings['database']
 
 read_settings.close()
 
-db_counting = mysql.connector.connect(
-    host=host,
-    database=database,
-    user=user,
-    passwd=passwd
-)
-
-counting_cursor = db_counting.cursor()
-counting_cursor.execute("SELECT footer FROM counting_settings")
-embed_footer = counting_cursor.fetchone()
-
-counting_cursor.execute("SELECT embed_color FROM counting_settings")
-embed_color_tuple = counting_cursor.fetchone()
-embed_color = int(embed_color_tuple[0], 16)
-
 
 class HelpMsg(commands.Cog):
 
@@ -37,6 +22,16 @@ class HelpMsg(commands.Cog):
 
     @commands.command(name="help")
     async def helpcmd(self, ctx):
+        db_counting = mysql.connector.connect(host=host, database=database, user=user, passwd=passwd)
+
+        counting_cursor = db_counting.cursor()
+        counting_cursor.execute("SELECT footer FROM counting_settings")
+        embed_footer = counting_cursor.fetchone()
+
+        counting_cursor.execute("SELECT embed_color FROM counting_settings")
+        embed_color_tuple = counting_cursor.fetchone()
+        embed_color = int(embed_color_tuple[0], 16)
+
         prefix = ('c!',)
         owner = ctx.guild.owner
 
@@ -76,6 +71,8 @@ class HelpMsg(commands.Cog):
         embed.set_thumbnail(url=self.client.user.avatar_url)
         embed.set_footer(text=embed_footer[0])
         await ctx.send(embed=embed)
+
+        db_counting.close()
 
 
 def setup(client):
