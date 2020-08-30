@@ -50,9 +50,7 @@ class HelpMsg(commands.Cog):
                             f"\n• **{prefix[0]}help** - Displays this Embed."
                             f"\n• **{prefix[0]}ping** - Get the ping in milliseconds of the bot."
                             f"\n• **{prefix[0]}info** - Get all the information about the bot."
-                            f"\n• **{prefix[0]}premium** - Get all information how to get the premium bot."
-                            f"\n• **{prefix[0]}leaderboard** - Get a leaderboard with members that counted the most."
-                            f"\n• **{prefix[0]}user** - See how many times you counted in the server.",
+                            f"\n• **{prefix[0]}premium** - Get all information how to get the premium bot.",
                 color=embed_color,
                 timestamp=datetime.datetime.utcnow()
             )
@@ -61,9 +59,7 @@ class HelpMsg(commands.Cog):
                 description=f"\n• **{prefix[0]}help** - Displays this Embed."
                             f"\n• **{prefix[0]}ping** - Get the ping in milliseconds of the bot."
                             f"\n• **{prefix[0]}info** - Get all the information about the bot."
-                            f"\n• **{prefix[0]}premium** - Get all information how to get the premium bot."
-                            f"\n• **{prefix[0]}leaderboard** - Get a leaderboard with members that counted the most."
-                            f"\n• **{prefix[0]}user** - See how many times you counted in the server.",
+                            f"\n• **{prefix[0]}premium** - Get all information how to get the premium bot.",
                 color=embed_color,
                 timestamp=datetime.datetime.utcnow()
             )
