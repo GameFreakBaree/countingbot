@@ -13,21 +13,6 @@ database = settings['database']
 
 read_settings.close()
 
-db_counting = mysql.connector.connect(
-    host=host,
-    database=database,
-    user=user,
-    passwd=passwd
-)
-
-counting_cursor = db_counting.cursor()
-counting_cursor.execute("SELECT footer FROM counting_settings")
-embed_footer = counting_cursor.fetchone()
-
-counting_cursor.execute("SELECT embed_color FROM counting_settings")
-embed_color_tuple = counting_cursor.fetchone()
-embed_color = int(embed_color_tuple[0], 16)
-
 
 class PingCmd(commands.Cog):
 
@@ -36,6 +21,16 @@ class PingCmd(commands.Cog):
 
     @commands.command()
     async def ping(self, ctx):
+        db_counting = mysql.connector.connect(host=host, database=database, user=user, passwd=passwd)
+
+        counting_cursor = db_counting.cursor()
+        counting_cursor.execute("SELECT footer FROM counting_settings")
+        embed_footer = counting_cursor.fetchone()
+
+        counting_cursor.execute("SELECT embed_color FROM counting_settings")
+        embed_color_tuple = counting_cursor.fetchone()
+        embed_color = int(embed_color_tuple[0], 16)
+
         ping = round(self.client.latency * 1000)
 
         if ping > 1000:
@@ -52,6 +47,8 @@ class PingCmd(commands.Cog):
         embed.set_author(name=self.client.user.display_name, icon_url=self.client.user.avatar_url)
         embed.set_footer(text=embed_footer[0])
         await ctx.send(embed=embed)
+
+        db_counting.close()
 
 
 def setup(client):
