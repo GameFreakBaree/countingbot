@@ -2,24 +2,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import MissingPermissions
 import mysql.connector
-import json
-
-with open('./db_settings.json', 'r', encoding='utf-8') as read_settings:
-    settings = json.load(read_settings)
-
-host = settings['host']
-user = settings['user']
-passwd = settings['passwd']
-database = settings['database']
-
-read_settings.close()
-
-db_counting = mysql.connector.connect(
-    host=host,
-    database=database,
-    user=user,
-    passwd=passwd
-)
+from data import settings
 
 
 class ConfigCmd(commands.Cog):
@@ -31,24 +14,18 @@ class ConfigCmd(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def config(self, ctx, setting=None, value=None):
         guild = ctx.guild.id
-        db_counting.commit()
+        db_counting = mysql.connector.connect(host=settings.host, user=settings.user, passwd=settings.passwd,
+                                              database=settings.database)
         counting_cursor = db_counting.cursor()
-
-        counting_cursor.execute("SELECT footer FROM counting_settings")
-        embed_footer = counting_cursor.fetchone()
-
-        counting_cursor.execute("SELECT embed_color FROM counting_settings")
-        embed_color_tuple = counting_cursor.fetchone()
-        embed_color = int(embed_color_tuple[0], 16)
 
         if setting is None:
             embed = discord.Embed(
                 title="Config: Help",
-                description="c!config maxcount <number>\nc!config resetonfail <enabled/disabled>",
-                color=embed_color
+                description="c!config maxcount <number>\nc!config resetonfail <enabled/disabled>\nc!config emotereact <enabled/disabled>",
+                color=settings.embedcolor
             )
             embed.set_author(name=self.client.user.display_name, icon_url=self.client.user.avatar_url)
-            embed.set_footer(text=embed_footer[0])
+            embed.set_footer(text=settings.footer)
             await ctx.send(embed=embed)
         elif setting == "maxcount":
             try:
@@ -61,10 +38,10 @@ class ConfigCmd(commands.Cog):
                     embed = discord.Embed(
                         title="Config: Maxcount",
                         description=f"The maximum count has been set to {maxcount_number}.",
-                        color=embed_color
+                        color=settings.embedcolor
                     )
                     embed.set_author(name=self.client.user.display_name, icon_url=self.client.user.avatar_url)
-                    embed.set_footer(text=embed_footer[0])
+                    embed.set_footer(text=settings.footer)
                     await ctx.send(embed=embed)
                 else:
                     await ctx.send("The number has to be between 50 and 2147483647")
@@ -85,13 +62,36 @@ class ConfigCmd(commands.Cog):
                 embed = discord.Embed(
                     title="Config: Reset On Fail",
                     description=f"Reset on failure has now been {value.lower()}.",
-                    color=embed_color
+                    color=settings.embedcolor
                 )
                 embed.set_author(name=self.client.user.display_name, icon_url=self.client.user.avatar_url)
-                embed.set_footer(text=embed_footer[0])
+                embed.set_footer(text=settings.footer)
                 await ctx.send(embed=embed)
             else:
                 await ctx.send("Invalid Arguments. Try: `c!config resetonfail <enabled/disabled>`")
+        elif setting == "emotereact":
+            if value.lower() == "enabled" or value.lower() == "disabled":
+                if value.lower() == "enabled":
+                    emotereact = 0
+                elif value.lower() == "disabled":
+                    emotereact = 1
+                else:
+                    emotereact = 0
+                setting_sql_emotereact = f"UPDATE counting_guildsettings SET emote_react = {emotereact} WHERE guild_id = {guild}"
+                counting_cursor.execute(setting_sql_emotereact)
+                db_counting.commit()
+
+                embed = discord.Embed(
+                    title="Config: Emote React",
+                    description=f"Adding a emote on every message is now {value.lower()}.",
+                    color=settings.embedcolor
+                )
+                embed.set_author(name=self.client.user.display_name, icon_url=self.client.user.avatar_url)
+                embed.set_footer(text=settings.footer)
+                await ctx.send(embed=embed)
+            else:
+                await ctx.send("Invalid Arguments. Try: `c!config emotereact <enabled/disabled>`")
+        db_counting.close()
 
     @config.error
     async def config_error(self, ctx, error):
