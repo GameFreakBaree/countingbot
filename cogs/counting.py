@@ -1,23 +1,13 @@
 import discord
 from discord.ext import commands
 import mysql.connector
-import json
-
-with open('./db_settings.json', 'r', encoding='utf-8') as read_settings:
-    settings = json.load(read_settings)
-
-host = settings['host']
-user = settings['user']
-passwd = settings['passwd']
-database = settings['database']
-
-read_settings.close()
+from data import settings
 
 db_counting = mysql.connector.connect(
-    host=host,
-    database=database,
-    user=user,
-    passwd=passwd
+    host=settings.host,
+    database=settings.database,
+    user=settings.user,
+    passwd=settings.passwd
 )
 
 
@@ -28,180 +18,197 @@ class Counting(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        db_counting.commit()
-        counting_cursor = db_counting.cursor()
-
         if message.author.bot is False:
-            if message.guild.id != 110373943822540800:
-                guild = message.guild.id
-                counting_cursor.execute(
-                    f"SELECT counting_channel_id FROM counting_guildsettings WHERE guild_id = {guild}")
-                counting_channel_id = counting_cursor.fetchone()
-                if message.channel.id == counting_channel_id[0] or counting_channel_id is not None:
-                    counting_cursor.execute(f"SELECT last_user_id FROM counting_data WHERE guild_id = {guild}")
-                    vorige_id_tuple = counting_cursor.fetchone()
-                    vorige_id = int(vorige_id_tuple[0])
+            db_counting.commit()
+            counting_cursor = db_counting.cursor()
 
-                    if message.author.id == vorige_id:
-                        await message.channel.purge(limit=1)
-                    else:
-                        counting_cursor.execute(
-                            f"SELECT restart_on_error FROM counting_guildsettings WHERE guild_id = {guild}")
-                        resetonfail_tuple = counting_cursor.fetchone()
-                        resetonfail = int(resetonfail_tuple[0])
+            guild = message.guild.id
+            counting_cursor.execute(f"SELECT counting_channel_id FROM counting_guildsettings WHERE guild_id = {guild}")
+            counting_channel_id = counting_cursor.fetchone()
+            if message.channel.id == counting_channel_id[0]:
+                counting_cursor.execute(f"SELECT last_user_id FROM counting_data WHERE guild_id = {guild}")
+                vorige_id_tuple = counting_cursor.fetchone()
+                vorige_id = int(vorige_id_tuple[0])
 
-                        counting_cursor.execute("SELECT footer FROM counting_settings")
-                        embed_footer = counting_cursor.fetchone()
+                if message.author.id == vorige_id:
+                    await message.channel.purge(limit=1)
+                else:
+                    counting_cursor.execute(
+                        f"SELECT restart_on_error FROM counting_guildsettings WHERE guild_id = {guild}")
+                    resetonfail_tuple = counting_cursor.fetchone()
+                    resetonfail = int(resetonfail_tuple[0])
 
-                        counting_cursor.execute("SELECT embed_color FROM counting_settings")
-                        embed_color_tuple = counting_cursor.fetchone()
-                        embed_color = int(embed_color_tuple[0], 16)
+                    counting_cursor.execute(f"SELECT number FROM counting_data WHERE guild_id = {guild}")
+                    number_tuple = counting_cursor.fetchone()
+                    number = int(number_tuple[0])
 
-                        counting_cursor.execute(f"SELECT error_emote FROM counting_settings")
-                        error_emote_tuple = counting_cursor.fetchone()
-                        error_emote = str(error_emote_tuple[0])
+                    try:
+                        if resetonfail == 0:
+                            message_inhoud = int(message.content)
+                            if message_inhoud == number + 1:
+                                counting_cursor.execute(
+                                    f"SELECT maxcount FROM counting_guildsettings WHERE guild_id = {guild}")
+                                maxcount_tuple = counting_cursor.fetchone()
+                                maxcount = int(maxcount_tuple[0])
 
-                        try:
-                            counting_cursor.execute(f"SELECT success_emote FROM counting_settings")
-                            check_emote_tuple = counting_cursor.fetchone()
-                            check_emote = str(check_emote_tuple[0])
+                                # Emote React START #
+                                counting_cursor.execute(
+                                    f"SELECT emote_react FROM counting_guildsettings WHERE guild_id = {guild}")
+                                emotereact_tuple = counting_cursor.fetchone()
+                                emotereact = int(emotereact_tuple[0])
 
-                            counting_cursor.execute(f"SELECT number FROM counting_data WHERE guild_id = {guild}")
-                            number_tuple = counting_cursor.fetchone()
-                            number = int(number_tuple[0])
+                                if emotereact == 0:
+                                    await message.add_reaction(emoji=settings.succes_emote)
+                                # Emote React STOP #
 
-                            if resetonfail == 0:
-                                message_inhoud = int(message.content)
-                                if message_inhoud == number + 1:
-                                    counting_cursor.execute(
-                                        f"SELECT maxcount FROM counting_guildsettings WHERE guild_id = {guild}")
-                                    maxcount_tuple = counting_cursor.fetchone()
-                                    maxcount = int(maxcount_tuple[0])
+                                counting_cursor.execute(
+                                    f"SELECT user_id FROM counting_userdata WHERE user_id = {message.author.id} AND guild_id = {guild}")
+                                user_id = counting_cursor.fetchone()
 
-                                    if number + 1 == maxcount:
-                                        update_sql_member_maxcount = f"UPDATE counting_data SET last_user_id = {message.author.id} WHERE guild_id = {guild}"
-                                        counting_cursor.execute(update_sql_member_maxcount)
-                                        db_counting.commit()
-
-                                        update_sql_nr_maxcount = f"UPDATE counting_data SET number = 0 WHERE guild_id = {guild}"
-                                        counting_cursor.execute(update_sql_nr_maxcount)
-                                        db_counting.commit()
-
-                                        counting_channel = self.client.get_channel(counting_channel_id[0])
-                                        await message.add_reaction(emoji=check_emote)
-
-                                        embed = discord.Embed(
-                                            title="Count Reset!",
-                                            description=f"Maximum count archieved ({maxcount})! Count reset to 0.",
-                                            color=embed_color
-                                        )
-                                        embed.set_author(name=self.client.user.display_name,
-                                                         icon_url=self.client.user.avatar_url)
-                                        embed.set_footer(text=embed_footer[0])
-                                        await counting_channel.send(embed=embed)
-                                    else:
-                                        await message.add_reaction(emoji=check_emote)
-
-                                        update_sql_member = f"UPDATE counting_data SET last_user_id = {message.author.id} WHERE guild_id = {guild}"
-                                        counting_cursor.execute(update_sql_member)
-                                        db_counting.commit()
-
-                                        update_sql_nr = f"UPDATE counting_data SET number = {number + 1} WHERE guild_id = {guild}"
-                                        counting_cursor.execute(update_sql_nr)
-                                        db_counting.commit()
+                                if user_id is None:
+                                    instert_new_user_id = "INSERT INTO counting_userdata (guild_id, user_id, count) VALUES (%s, %s, %s)"
+                                    countingbot_record = (guild, message.author.id, 1)
+                                    counting_cursor.execute(instert_new_user_id, countingbot_record)
+                                    db_counting.commit()
                                 else:
-                                    await message.channel.purge(limit=1)
-                            else:
-                                message_inhoud = int(message.content)
-                                if message_inhoud == number + 1:
                                     counting_cursor.execute(
-                                        f"SELECT maxcount FROM counting_guildsettings WHERE guild_id = {guild}")
-                                    maxcount_tuple = counting_cursor.fetchone()
-                                    maxcount = int(maxcount_tuple[0])
-
-                                    if number + 1 == maxcount:
-                                        update_sql_member_maxcount = f"UPDATE counting_data SET last_user_id = {message.author.id} WHERE guild_id = {guild}"
-                                        counting_cursor.execute(update_sql_member_maxcount)
-                                        db_counting.commit()
-
-                                        update_sql_nr_maxcount = f"UPDATE counting_data SET number = 0 WHERE guild_id = {guild}"
-                                        counting_cursor.execute(update_sql_nr_maxcount)
-                                        db_counting.commit()
-
-                                        counting_cursor.execute("SELECT footer FROM counting_settings")
-                                        embed_footer = counting_cursor.fetchone()
-
-                                        counting_cursor.execute("SELECT embed_color FROM counting_settings")
-                                        embed_color_tuple = counting_cursor.fetchone()
-                                        embed_color = int(embed_color_tuple[0], 16)
-
-                                        counting_channel = self.client.get_channel(counting_channel_id[0])
-                                        await message.add_reaction(emoji=check_emote)
-
-                                        embed = discord.Embed(
-                                            title="Count Reset!",
-                                            description=f"Maximum count archieved ({maxcount})! Count reset to 0.",
-                                            color=embed_color
-                                        )
-                                        embed.set_author(name=self.client.user.display_name,
-                                                         icon_url=self.client.user.avatar_url)
-                                        embed.set_footer(text=embed_footer[0])
-                                        await counting_channel.send(embed=embed)
-                                    else:
-                                        await message.add_reaction(emoji=check_emote)
-
-                                        update_sql_member = f"UPDATE counting_data SET last_user_id = {message.author.id} WHERE guild_id = {guild}"
-                                        counting_cursor.execute(update_sql_member)
-                                        db_counting.commit()
-
-                                        update_sql_nr = f"UPDATE counting_data SET number = {number + 1} WHERE guild_id = {guild}"
-                                        counting_cursor.execute(update_sql_nr)
-                                        db_counting.commit()
-                                else:
-                                    update_sql_member_maxcount = f"UPDATE counting_data SET last_user_id = {message.author.id} WHERE guild_id = {guild}"
-                                    counting_cursor.execute(update_sql_member_maxcount)
+                                        f"UPDATE counting_userdata SET count = count + 1 WHERE guild_id = {guild}")
                                     db_counting.commit()
 
-                                    update_sql_nr_maxcount = f"UPDATE counting_data SET number = 0 WHERE guild_id = {guild}"
-                                    counting_cursor.execute(update_sql_nr_maxcount)
+                                if number + 1 == maxcount:
+                                    counting_cursor.execute(
+                                        f"UPDATE counting_data SET last_user_id = {message.author.id} WHERE guild_id = {guild}")
+                                    counting_cursor.execute(
+                                        f"UPDATE counting_data SET number = 0 WHERE guild_id = {guild}")
                                     db_counting.commit()
 
                                     counting_channel = self.client.get_channel(counting_channel_id[0])
-                                    await message.add_reaction(emoji=error_emote)
 
                                     embed = discord.Embed(
                                         title="Count Reset!",
-                                        description=f"Wrong number! The count has now been reset to 0.",
-                                        color=embed_color
+                                        description=f"Maximum count archieved ({maxcount})! Count reset to 0.",
+                                        color=settings.embedcolor
                                     )
                                     embed.set_author(name=self.client.user.display_name,
                                                      icon_url=self.client.user.avatar_url)
-                                    embed.set_footer(text=embed_footer[0])
+                                    embed.set_footer(text=settings.footer)
                                     await counting_channel.send(embed=embed)
-                        except ValueError:
-                            if resetonfail == 0:
-                                await message.channel.purge(limit=1)
-                            else:
-                                update_sql_member_maxcount = f"UPDATE counting_data SET last_user_id = {message.author.id} WHERE guild_id = {guild}"
-                                counting_cursor.execute(update_sql_member_maxcount)
-                                db_counting.commit()
+                                else:
+                                    counting_cursor.execute(
+                                        f"UPDATE counting_data SET last_user_id = {message.author.id} WHERE guild_id = {guild}")
+                                    counting_cursor.execute(
+                                        f"UPDATE counting_data SET number = {number + 1} WHERE guild_id = {guild}")
+                                    db_counting.commit()
+                        else:
+                            message_inhoud = int(message.content)
+                            if message_inhoud == number + 1:
+                                counting_cursor.execute(
+                                    f"SELECT maxcount FROM counting_guildsettings WHERE guild_id = {guild}")
+                                maxcount_tuple = counting_cursor.fetchone()
+                                maxcount = int(maxcount_tuple[0])
 
-                                update_sql_nr_maxcount = f"UPDATE counting_data SET number = 0 WHERE guild_id = {guild}"
-                                counting_cursor.execute(update_sql_nr_maxcount)
+                                # Emote React START #
+                                counting_cursor.execute(
+                                    f"SELECT emote_react FROM counting_guildsettings WHERE guild_id = {guild}")
+                                emotereact_tuple = counting_cursor.fetchone()
+                                emotereact = int(emotereact_tuple[0])
+
+                                if emotereact == 0:
+                                    await message.add_reaction(emoji=settings.succes_emote)
+                                # Emote React STOP #
+
+                                counting_cursor.execute(
+                                    f"SELECT user_id FROM counting_userdata WHERE user_id = {message.author.id} AND guild_id = {guild}")
+                                user_id = counting_cursor.fetchone()
+
+                                if user_id is None:
+                                    instert_new_user_id = "INSERT INTO counting_userdata (guild_id, user_id, count) VALUES (%s, %s, %s)"
+                                    countingbot_record = (guild, message.author.id, 1)
+                                    counting_cursor.execute(instert_new_user_id, countingbot_record)
+                                    db_counting.commit()
+                                else:
+                                    counting_cursor.execute(
+                                        f"UPDATE counting_userdata SET count = count + 1 WHERE guild_id = {guild}")
+                                    db_counting.commit()
+
+                                if number + 1 == maxcount:
+                                    counting_cursor.execute(
+                                        f"UPDATE counting_data SET last_user_id = {message.author.id} WHERE guild_id = {guild}")
+                                    counting_cursor.execute(
+                                        f"UPDATE counting_data SET number = 0 WHERE guild_id = {guild}")
+                                    db_counting.commit()
+
+                                    counting_channel = self.client.get_channel(counting_channel_id[0])
+
+                                    embed = discord.Embed(
+                                        title="Count Reset!",
+                                        description=f"Maximum count archieved ({maxcount})! Count reset to 0.",
+                                        color=settings.embedcolor
+                                    )
+                                    embed.set_author(name=self.client.user.display_name,
+                                                     icon_url=self.client.user.avatar_url)
+                                    embed.set_footer(text=settings.footer)
+                                    await counting_channel.send(embed=embed)
+                                else:
+                                    counting_cursor.execute(
+                                        f"UPDATE counting_data SET last_user_id = {message.author.id} WHERE guild_id = {guild}")
+                                    counting_cursor.execute(
+                                        f"UPDATE counting_data SET number = {number + 1} WHERE guild_id = {guild}")
+                                    db_counting.commit()
+                            else:
+                                counting_cursor.execute(
+                                    f"UPDATE counting_data SET last_user_id = {message.author.id} WHERE guild_id = {guild}")
+                                counting_cursor.execute(f"UPDATE counting_data SET number = 0 WHERE guild_id = {guild}")
                                 db_counting.commit()
 
                                 counting_channel = self.client.get_channel(counting_channel_id[0])
-                                await message.add_reaction(emoji=error_emote)
+
+                                # Emote React START #
+                                counting_cursor.execute(
+                                    f"SELECT emote_react FROM counting_guildsettings WHERE guild_id = {guild}")
+                                emotereact_tuple = counting_cursor.fetchone()
+                                emotereact = int(emotereact_tuple[0])
+
+                                if emotereact == 0:
+                                    await message.add_reaction(emoji=settings.error_emote)
+                                # Emote React STOP #
 
                                 embed = discord.Embed(
                                     title="Count Reset!",
                                     description=f"Wrong number! The count has now been reset to 0.",
-                                    color=embed_color
+                                    color=settings.embedcolor
                                 )
                                 embed.set_author(name=self.client.user.display_name,
                                                  icon_url=self.client.user.avatar_url)
-                                embed.set_footer(text=embed_footer[0])
+                                embed.set_footer(text=settings.footer)
                                 await counting_channel.send(embed=embed)
+                    except ValueError:
+                        if resetonfail == 0:
+                            await message.channel.purge(limit=1)
+                        else:
+                            counting_cursor.execute(
+                                f"UPDATE counting_data SET last_user_id = {message.author.id} WHERE guild_id = {guild}")
+                            counting_cursor.execute(f"UPDATE counting_data SET number = 0 WHERE guild_id = {guild}")
+                            db_counting.commit()
+
+                            counting_channel = self.client.get_channel(counting_channel_id[0])
+
+                            counting_cursor.execute(
+                                f"SELECT emote_react FROM counting_guildsettings WHERE guild_id = {guild}")
+                            emotereact_tuple = counting_cursor.fetchone()
+                            emotereact = int(emotereact_tuple[0])
+
+                            if emotereact == 0:
+                                await message.add_reaction(emoji=settings.error_emote)
+
+                            embed = discord.Embed(
+                                title="Count Reset!",
+                                description=f"Wrong number! The count has now been reset to 0.",
+                                color=settings.embedcolor
+                            )
+                            embed.set_author(name=self.client.user.display_name, icon_url=self.client.user.avatar_url)
+                            embed.set_footer(text=settings.footer)
+                            await counting_channel.send(embed=embed)
 
 
 def setup(client):
