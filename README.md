@@ -12,11 +12,14 @@ Want to contribute? Great, we love that! Please take your time on [opening a new
 * **c!ping** - Get the ping in milliseconds of the bot. [Everyone]
 * **c!info** - Get all the information about the bot. [Everyone]
 * **c!config** - Here you can configurate the bot however you like. [MANAGE_SERVER]
+* **c!leaderboard** - Get a leaderboard with members that counted the most. [Everyone]
+* **c!user** - See how many times you counted in the server. [Everyone]
 
 ## Config (c!config)
 * **c!config** - See all possible commands in config.
 * **c!config maxcount {number}** - Change the maximum count. Min 50, Max 2147483647 [Default: 2147483647]
 * **c!config resetonfail {enabled/disabled}** - Reset count if someone types the wrong number. [Default: disabled]
+* **c!config emotereact {enabled/disabled}** - React on every count message. [Default: enabled]
 
 ## License
 This project is licensed under the GNU GPLv3-license. I love to see that other developers learn from my code. You can use it but cannot claim it as yours.
