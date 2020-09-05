@@ -1,22 +1,12 @@
 from discord.ext import commands
 import mysql.connector
-import json
-
-with open('./db_settings.json', 'r', encoding='utf-8') as read_settings:
-    settings = json.load(read_settings)
-
-host = settings['host']
-user = settings['user']
-passwd = settings['passwd']
-database = settings['database']
-
-read_settings.close()
+from data import settings
 
 db_counting = mysql.connector.connect(
-    host=host,
-    database=database,
-    user=user,
-    passwd=passwd
+    host=settings.host,
+    database=settings.database,
+    user=settings.user,
+    passwd=settings.passwd
 )
 
 
@@ -29,17 +19,9 @@ class OnReady(commands.Cog):
     async def on_guild_remove(self, guild):
         db_counting.commit()
         counting_cursor = db_counting.cursor()
-
-        dropguilddata = f"DELETE FROM counting_guilddata WHERE guild_id = {guild.id}"
-        counting_cursor.execute(dropguilddata)
-        db_counting.commit()
-
-        dropdata = f"DELETE FROM counting_data WHERE guild_id = {guild.id}"
-        counting_cursor.execute(dropdata)
-        db_counting.commit()
-
-        dropguildsettings = f"DELETE FROM counting_guildsettings WHERE guild_id = {guild.id}"
-        counting_cursor.execute(dropguildsettings)
+        counting_cursor.execute(f"DELETE FROM counting_userdata WHERE guild_id = {guild.id}")
+        counting_cursor.execute(f"DELETE FROM counting_data WHERE guild_id = {guild.id}")
+        counting_cursor.execute(f"DELETE FROM counting_guildsettings WHERE guild_id = {guild.id}")
         db_counting.commit()
 
 
