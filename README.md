@@ -12,6 +12,7 @@ Want to contribute? Great, we love that! Please take your time on [opening a new
 * **c!leaderboard** - Get a leaderboard with members that counted the most.
 * **c!userinfo** - See how many times you counted in the server.
 * **c!help** - A help command with all commands displayed.
+* **c!currentcount** - Tells you on which number the count is.
 
 ### Commands for users' with MANAGE_SERVER permission
 * **c!autosetup** - Run this command and it will setup a channel automatically. You can change the name and position of the channel without problems.
