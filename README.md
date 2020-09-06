@@ -1,5 +1,5 @@
 # CountingBot
-CountingBot is a Discord Bot just for one purpose. To make a minigame that players can count in. The purpose is to make a very customizable bot without a advanced configuration.
+CountingBot is a Discord Bot just for one purpose. To make a minigame that players can count in. The purpose is to make a very customizable bot without a advanced configuration. We also made the bot 100% free for everyone to use. Once we reach 500 guilds we will make a premium bot.
 
 ## Suggestions, bugs, feature requests
 Want to contribute? Great, we love that! Please take your time on [opening a new issue](https://github.com/GameFreakBaree/countingbot/issues).
