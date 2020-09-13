@@ -25,7 +25,11 @@ class Counting(commands.Cog):
             guild = message.guild.id
             counting_cursor.execute(f"SELECT counting_channel_id FROM counting_guildsettings WHERE guild_id = {guild}")
             counting_channel_id = counting_cursor.fetchone()
-            if message.channel.id == counting_channel_id[0]:
+
+            counting_cursor.execute(f"SELECT toggle FROM counting_guildsettings WHERE guild_id = {guild}")
+            toggle = counting_cursor.fetchone()
+
+            if message.channel.id == counting_channel_id[0] and toggle[0] == 0:
                 counting_cursor.execute(f"SELECT last_user_id FROM counting_data WHERE guild_id = {guild}")
                 vorige_id_tuple = counting_cursor.fetchone()
                 vorige_id = int(vorige_id_tuple[0])
@@ -59,6 +63,20 @@ class Counting(commands.Cog):
                             if emotereact == 0:
                                 await message.add_reaction(emoji=settings.succes_emote)
                             # Emote React STOP #
+
+                            counting_cursor.execute(
+                                f"SELECT user_id FROM counting_userdata WHERE user_id = {message.author.id} AND guild_id = {guild}")
+                            user_id = counting_cursor.fetchone()
+
+                            if user_id is None:
+                                instert_new_user_id = "INSERT INTO counting_userdata (guild_id, user_id, count) VALUES (%s, %s, %s)"
+                                countingbot_record = (guild, message.author.id, 1)
+                                counting_cursor.execute(instert_new_user_id, countingbot_record)
+                                db_counting.commit()
+                            else:
+                                counting_cursor.execute(
+                                    f"UPDATE counting_userdata SET count = count + 1 WHERE guild_id = {guild} AND user_id = {message.author.id}")
+                                db_counting.commit()
 
                             if number + 1 == maxcount:
                                 counting_cursor.execute(
@@ -115,7 +133,7 @@ class Counting(commands.Cog):
                                 await counting_channel.send(embed=embed)
                     except ValueError:
                         if resetonfail == 0:
-                            await message.channel.purge(limit=1)
+                            await message.delete()
                         else:
                             # Emote React START #
                             counting_cursor.execute(
@@ -143,6 +161,21 @@ class Counting(commands.Cog):
                                              icon_url=self.client.user.avatar_url)
                             embed.set_footer(text=settings.footer)
                             await counting_channel.send(embed=embed)
+        else:
+            if int(message.author.id) != 742776969481158766 and int(message.author.id) != 745569576980447252:
+                db_counting.commit()
+                counting_cursor = db_counting.cursor()
+
+                guild = message.guild.id
+                counting_cursor.execute(
+                    f"SELECT counting_channel_id FROM counting_guildsettings WHERE guild_id = {guild}")
+                counting_channel_id = counting_cursor.fetchone()
+
+                counting_cursor.execute(f"SELECT toggle FROM counting_guildsettings WHERE guild_id = {guild}")
+                toggle = counting_cursor.fetchone()
+
+                if message.channel.id == counting_channel_id[0] and toggle[0] == 0:
+                    await message.delete()
 
 
 def setup(client):

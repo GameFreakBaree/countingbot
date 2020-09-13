@@ -21,7 +21,7 @@ class ConfigCmd(commands.Cog):
         if setting is None:
             embed = discord.Embed(
                 title="Config: Help",
-                description="c!config maxcount <number>\nc!config resetonfail <enabled/disabled>\nc!config emotereact <enabled/disabled>",
+                description="c!config maxcount <number>\nc!config resetonfail <enabled/disabled>\nc!config emotereact <enabled/disabled>\nc!config resetscore <user>",
                 color=settings.embedcolor
             )
             embed.set_author(name=self.client.user.display_name, icon_url=self.client.user.avatar_url)
@@ -31,8 +31,7 @@ class ConfigCmd(commands.Cog):
             try:
                 maxcount_number = int(value)
                 if 50 <= maxcount_number <= 2147483647:
-                    setting_sql_maxcount = f"UPDATE counting_guildsettings SET maxcount = {maxcount_number} WHERE guild_id = {guild}"
-                    counting_cursor.execute(setting_sql_maxcount)
+                    counting_cursor.execute(f"UPDATE counting_guildsettings SET maxcount = {maxcount_number} WHERE guild_id = {guild}")
                     db_counting.commit()
 
                     embed = discord.Embed(
@@ -55,8 +54,8 @@ class ConfigCmd(commands.Cog):
                     restartonerror = 0
                 else:
                     restartonerror = 0
-                setting_sql_resetonfail = f"UPDATE counting_guildsettings SET restart_on_error = {restartonerror} WHERE guild_id = {guild}"
-                counting_cursor.execute(setting_sql_resetonfail)
+
+                counting_cursor.execute(f"UPDATE counting_guildsettings SET restart_on_error = {restartonerror} WHERE guild_id = {guild}")
                 db_counting.commit()
 
                 embed = discord.Embed(
@@ -77,8 +76,8 @@ class ConfigCmd(commands.Cog):
                     emotereact = 1
                 else:
                     emotereact = 0
-                setting_sql_emotereact = f"UPDATE counting_guildsettings SET emote_react = {emotereact} WHERE guild_id = {guild}"
-                counting_cursor.execute(setting_sql_emotereact)
+
+                counting_cursor.execute(f"UPDATE counting_guildsettings SET emote_react = {emotereact} WHERE guild_id = {guild}")
                 db_counting.commit()
 
                 embed = discord.Embed(
