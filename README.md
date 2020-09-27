@@ -21,6 +21,9 @@ Want to contribute? Great, we love that! Please take your time on [opening a new
 * **c!config** - Here you can configurate the bot however you like.
 * **c!toggle** - Pause/Unpause the channel from counting in it.
 * **c!settopic** - Set the topic of the channel.
+* **c!resetscore {user}** - Reset a user's score.
+* **c!mute {user}** - Mute a user from counting in the channel.
+* **c!unmute {user}** - Unmute a user from counting in the channel.
 
 ### Commands for the Owner of the guild
 * **c!resetall** - Remove all data from the bot in the guild.
